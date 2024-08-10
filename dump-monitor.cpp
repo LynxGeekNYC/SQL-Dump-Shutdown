@@ -7,6 +7,7 @@
 #define EVENT_SIZE  ( sizeof (struct inotify_event) )
 #define EVENT_BUF_LEN     ( 1024 * ( EVENT_SIZE + 16 ) )
 
+// Function to shutdown a service
 void shutdown_service(const std::string &service_name) {
     std::string command = "sudo systemctl stop " + service_name;
     int result = system(command.c_str());
@@ -17,6 +18,20 @@ void shutdown_service(const std::string &service_name) {
     }
 }
 
+// Function to handle the notification and shutdown process
+void handle_sql_dump(const std::string &filename) {
+    std::cout << "\033[41;37m"; // Set background to red and text to white
+    std::cout << "\a\a\a"; // Beep three times
+    std::cout << "ALERT! SQL dump detected: " << filename << "\033[0m" << std::endl; // Reset colors
+
+    // Shutdown services
+    shutdown_service("mariadb");
+    shutdown_service("mysql");
+    shutdown_service("oracle");
+    // Add other SQL services if needed
+}
+
+// Function to monitor directory
 void monitor_directory(const std::string &dir_to_watch) {
     int length, i = 0;
     int fd = inotify_init();
@@ -45,13 +60,7 @@ void monitor_directory(const std::string &dir_to_watch) {
                 if (event->mask & IN_CREATE) {
                     std::string filename(event->name);
                     if (filename.find(".sql") != std::string::npos) {
-                        std::cout << "SQL dump detected: " << filename << std::endl;
-
-                        // Shutdown services
-                        shutdown_service("mariadb");
-                        shutdown_service("mysql");
-                        shutdown_service("oracle");
-                        // Add other SQL services if needed
+                        handle_sql_dump(filename);
                     }
                 }
             }
